@@ -1,21 +1,52 @@
 
+
 services:
+  # 🧭 Gateway Service
   gateway:
     build: ./gateway-service
     container_name: campusbot-gateway
     ports:
       - "8000:8000"
+    depends_on:
+      - user
     networks:
       - campus-net
+    environment:
+      - USER_SERVICE_URL=http://user:8001
+      - CHAT_SERVICE_URL=http://chat:8002
+      - KNOWLEDGE_SERVICE_URL=http://knowledge:8003
+      - AI_SERVICE_URL=http://ai:8004
 
+  # 👤 User Management Service
   user:
     build: ./user-service
     container_name: campusbot-user
     ports:
       - "8001:8001"
+    depends_on:
+      - user-db
+    environment:
+      - DATABASE_URL=postgresql://user_admin:user_pass@user-db:5432/user_db
     networks:
       - campus-net
 
+  # 🗄️ PostgreSQL for User Service
+  user-db:
+    image: postgres:15
+    container_name: campusbot-user-db
+    restart: always
+    environment:
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: user_pass
+      POSTGRES_DB: user_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    networks:
+      - campus-net
+
+  # 💬 Chat Service
   chat:
     build: ./chat-service
     container_name: campusbot-chat
@@ -24,6 +55,7 @@ services:
     networks:
       - campus-net
 
+  # 📚 Knowledge Service
   knowledge:
     build: ./knowledge-service
     container_name: campusbot-knowledge
@@ -32,6 +64,7 @@ services:
     networks:
       - campus-net
 
+  # 🧠 AI Service
   ai:
     build: ./ai-service
     container_name: campusbot-ai
@@ -40,6 +73,11 @@ services:
     networks:
       - campus-net
 
+# Shared Docker Network
 networks:
   campus-net:
     driver: bridge
+
+# Persistent Volumes for Databases
+volumes:
+  user_db_data:
